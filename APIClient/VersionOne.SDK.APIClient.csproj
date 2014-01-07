@@ -183,7 +183,6 @@
     <Compile Include="Query\ValueStringizer.cs" />
     <Compile Include="SingleValueAttribute.cs" />
     <Compile Include="Urls.cs" />
-    <Compile Include="V1Oauth2APIConnector.cs" />
     <Compile Include="XmlApiWriter.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -273,9 +272,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Pair.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="V1APIConnector.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="V1Central.cs">

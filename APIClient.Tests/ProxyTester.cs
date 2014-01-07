@@ -16,10 +16,13 @@ namespace VersionOne.SDK.APIClient.Tests {
 		[Test]
 		public void QueryProjects() {
 			var proxyProvider = new ProxyProvider(new Uri(ProxyPath), ProxyUsername, ProxyPassword);
-			IAPIConnector metaConnector = new V1APIConnector(V1Path + "meta.v1/", V1Username, V1Password, false, proxyProvider);
+			
+			IAPIConnector metaConnector = new VersionOneAPIConnector(V1Path + "meta.v1/", proxyProvider: proxyProvider)
+				.WithVersionOneUsernameAndPassword(V1Username, V1Password);
 			IMetaModel metaModel = new MetaModel(metaConnector);
 
-			IAPIConnector dataConnector = new V1APIConnector(V1Path + "rest-1.v1/", V1Username, V1Password, false, proxyProvider);
+			IAPIConnector dataConnector = new VersionOneAPIConnector(V1Path + "rest-1.v1/", proxyProvider: proxyProvider)
+				.WithVersionOneUsernameAndPassword(V1Username, V1Password);
 			IServices services = new Services(metaModel, dataConnector);
 
 			var projectType = metaModel.GetAssetType("Scope");

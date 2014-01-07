@@ -1,113 +1,147 @@
 using System.Xml;
 using System;
 
-namespace VersionOne.SDK.APIClient {
-    public interface ICentral {
-        IServices Services { get; }
-        IMetaModel MetaModel { get; }
-        ILocalizer Loc { get; }
-    }
+namespace VersionOne.SDK.APIClient
+{
 
-    public class V1Central : ICentral {
-        public V1Central(XmlNode config) {
-            applicationUrl = config["ApplicationUrl"].InnerText;
+	public interface ICentral
+	{
+		IServices Services { get; }
+		IMetaModel MetaModel { get; }
+		ILocalizer Loc { get; }
+	}
 
-            if(applicationUrl == null) {
-                applicationUrl = string.Empty;
-            } else if(!applicationUrl.EndsWith(@"/")) {
-                applicationUrl += @"/";
-            }
+	public class V1Central : ICentral
+	{
 
-            username = config["Username"].InnerText;
-            password = config["Password"].InnerText;
-            apiVersion = config["APIVersion"].InnerText;
-            integratedAuth = false;
-            bool.TryParse(config["IntegratedAuth"].InnerText, out integratedAuth);
-            
-            //proxy settings
-            if (config["ProxySettings"] != null) {
-                proxyDisabled = IsProxyDisabled(config["ProxySettings"].GetAttribute("disabled"));
-                proxyUri = new Uri(SafeGetInnerText(config["ProxySettings"], "Uri"));
-                proxyUserName = SafeGetInnerText(config["ProxySettings"], "UserName");
-                proxyPassword = SafeGetInnerText(config["ProxySettings"], "Password");
-                proxyDomain = SafeGetInnerText(config["ProxySettings"], "Domain");
-            }
-        }
+		private readonly string _applicationUrl = "http://localhost/VersionOne.Web/";
+		private readonly string _username = "admin";
+		private readonly string _password = "admin";
+		private readonly bool _integratedAuth;
+		private readonly string _apiVersion;
+		private readonly bool _proxyDisabled = true;
+		private readonly Uri _proxyUri = new Uri("http://proxy:123");
+		private readonly string _proxyUserName = "user";
+		private readonly string _proxyPassword = "password";
+		private readonly string _proxyDomain = "DOMAIN";
+		private bool _isValidKnown;
+		private bool _isValid;
 
-        private string SafeGetInnerText(XmlNode parent, string childNodeName) {
-            var childNode = parent[childNodeName];
-            return childNode != null ? childNode.InnerText : null;
-        }
+		public bool IsValid
+		{
+			get
+			{
+				if (_isValidKnown) return _isValid;
+				_isValidKnown = true;
 
-        private bool IsProxyDisabled(string status) {
-            return status != "0";
-        }
+				try
+				{
+					Validate();
+					_isValid = true;
+				}
+				catch (ConnectionException)
+				{
+					_isValid = false;
+				}
 
-        private IServices services;
+				return _isValid;
+			}
+		}
 
-        public IServices Services {
-            get { return services ?? (services = new Services(MetaModel, GetConnector("rest-1.v1/", false))); }
-        }
+		private IServices _services;
 
-        private IMetaModel metamodel;
+		public IServices Services
+		{
+			get { return _services ?? (_services = new Services(MetaModel, GetConnector("rest-1.v1/", false))); }
+		}
 
-        public IMetaModel MetaModel {
-            get { return metamodel ?? (metamodel = new MetaModel(GetConnector("meta.v1/", true))); }
-        }
+		private IMetaModel _metamodel;
 
-        private ILocalizer localizer;
+		public IMetaModel MetaModel
+		{
+			get { return _metamodel ?? (_metamodel = new MetaModel(GetConnector("meta.v1/", true))); }
+		}
 
-        public ILocalizer Loc {
-            get { return localizer ?? (localizer = new Localizer(GetConnector("loc.v1/", true))); }
-        }
+		private ILocalizer _localizer;
 
-        private V1APIConnector GetConnector(string path, bool anonymous) {
-            return anonymous ? new V1APIConnector(ApplicationUrl + path, null, null, true, Proxy) : new V1APIConnector(ApplicationUrl + path, username, password, integratedAuth, Proxy);
-        }
+		public ILocalizer Loc
+		{
+			get { return _localizer ?? (_localizer = new Localizer(GetConnector("loc.v1/", true))); }
+		}
 
-        private ProxyProvider Proxy {
-            get {
-                return proxyDisabled ? null : new ProxyProvider(proxyUri, proxyUserName, proxyPassword, proxyDomain);
-            }
-        }
+		private ProxyProvider Proxy
+		{
+			get
+			{
+				return _proxyDisabled ? null : new ProxyProvider(_proxyUri, _proxyUserName, _proxyPassword, _proxyDomain);
+			}
+		}
 
-        private readonly string applicationUrl = "http://localhost/VersionOne.Web/";
-        private readonly string username = "admin";
-        private readonly string password = "admin";
-        private readonly bool integratedAuth = false;
-        private readonly string apiVersion = null;
-        private readonly bool proxyDisabled = true;
-        private readonly Uri proxyUri = new Uri("http://proxy:123");
-        private readonly string proxyUserName = "user";
-        private readonly string proxyPassword = "password";
-        private readonly string proxyDomain = "DOMAIN";
+		public string ApplicationUrl
+		{
+			get { return _applicationUrl; }
+		}
 
-        private bool isValidKnown;
-        private bool isValid;
+		public V1Central(XmlNode config)
+		{
+			_applicationUrl = config["ApplicationUrl"].InnerText;
 
-        public bool IsValid {
-            get {
-                if (!isValidKnown) {
-                    isValidKnown = true;
-                    
-                    try {
-                        Validate();
-                        isValid = true;
-                    } catch (ConnectionException) {
-                        isValid = false;
-                    }
-                }
+			if (_applicationUrl == null)
+			{
+				_applicationUrl = string.Empty;
+			}
+			else if (!_applicationUrl.EndsWith(@"/"))
+			{
+				_applicationUrl += @"/";
+			}
 
-                return isValid;
-            }
-        }
+			_username = config["Username"].InnerText;
+			_password = config["Password"].InnerText;
+			_apiVersion = config["APIVersion"].InnerText;
+			_integratedAuth = false;
+			bool.TryParse(config["IntegratedAuth"].InnerText, out _integratedAuth);
 
-        public void Validate() {
-            new V1ConnectionValidator(ApplicationUrl, username, password, integratedAuth, Proxy).Test(apiVersion);
-        }
+			//proxy settings
+			if (config["ProxySettings"] != null)
+			{
+				_proxyDisabled = IsProxyDisabled(config["ProxySettings"].GetAttribute("disabled"));
+				_proxyUri = new Uri(SafeGetInnerText(config["ProxySettings"], "Uri"));
+				_proxyUserName = SafeGetInnerText(config["ProxySettings"], "UserName");
+				_proxyPassword = SafeGetInnerText(config["ProxySettings"], "Password");
+				_proxyDomain = SafeGetInnerText(config["ProxySettings"], "Domain");
+			}
+		}
 
-        public string ApplicationUrl {
-            get { return applicationUrl; }
-        }
-    }
+		private string SafeGetInnerText(XmlNode parent, string childNodeName)
+		{
+			var childNode = parent[childNodeName];
+			return childNode != null ? childNode.InnerText : null;
+		}
+
+		private bool IsProxyDisabled(string status)
+		{
+			return status != "0";
+		}
+
+		private VersionOneAPIConnector GetConnector(string path, bool anonymous)
+		{
+			var connector = new VersionOneAPIConnector(ApplicationUrl + path, proxyProvider: Proxy);
+
+			if (anonymous)
+				return connector;
+
+			if (_integratedAuth)
+				return connector.WithWindowsIntegratedAuthentication();
+
+			if (!string.IsNullOrWhiteSpace(_username))
+				return connector.WithVersionOneUsernameAndPassword(_username, _password);
+
+			throw new Exception("It was not possible to create a connector with the current authentication configuration.");
+		}
+
+		public void Validate()
+		{
+			new V1ConnectionValidator(ApplicationUrl, _username, _password, _integratedAuth, Proxy).Test(_apiVersion);
+		}
+	}
 }

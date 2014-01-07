@@ -3,38 +3,42 @@ using System.Collections.Generic;
 
 namespace VersionOne.SDK.APIClient {
     public class V1ConnectionValidator {
-        private readonly string connectionUrl;
-        private readonly string username;
-        private readonly string password;
-        private readonly bool integratedAuth;
-        private readonly IDictionary<string, string> customHttpHeaders = new Dictionary<string, string>();
+        private readonly string _connectionUrl;
+        private readonly string _username;
+        private readonly string _password;
+        private readonly bool _integratedAuth;
+        private readonly IDictionary<string, string> _customHttpHeaders = new Dictionary<string, string>();
 
-        private readonly ProxyProvider proxyProvider = null;
+        private readonly ProxyProvider _proxyProvider;
 
         public V1ConnectionValidator(string connectionUrl, string username, string password, bool integratedAuth) {
-            this.connectionUrl = connectionUrl;
+            _connectionUrl = connectionUrl;
 
-            if(this.connectionUrl == null) {
-                this.connectionUrl = string.Empty;
-            } else if(!this.connectionUrl.EndsWith("/")) {
-                this.connectionUrl += "/";
+            if(_connectionUrl == null) {
+                _connectionUrl = string.Empty;
+            } else if(!_connectionUrl.EndsWith("/")) {
+                _connectionUrl += "/";
             }
-
-            this.username = username;
-            this.password = password;
-            this.integratedAuth = integratedAuth;
+            _username = username;
+            _password = password;
+            _integratedAuth = integratedAuth;
         }
 
-        public V1ConnectionValidator(string connectionUrl, string username, string password, bool integratedAuth, ProxyProvider proxyProvider)
+        public V1ConnectionValidator(
+			string connectionUrl, 
+			string username, 
+			string password, 
+			bool integratedAuth, 
+			ProxyProvider proxyProvider)
             : this(connectionUrl, username, password, integratedAuth) {
-            this.proxyProvider = proxyProvider;
+            _proxyProvider = proxyProvider;
         }
 
         /// <summary>
         /// Headers from this Dictionary will be added to all HTTP requests to VersionOne server.
         /// </summary>
         public IDictionary<string, string> CustomHttpHeaders {
-            get { return customHttpHeaders; }
+            get { return _customHttpHeaders; }
         }
 
         public void Test() {
@@ -54,12 +58,12 @@ namespace VersionOne.SDK.APIClient {
         }
 
         public void CheckConnection() {
-            IAPIConnector connector = PrepareConnector(connectionUrl + "loc.v1/?Member");
+            IAPIConnector connector = PrepareConnector(_connectionUrl + "loc.v1/?Member");
             
             try {
                 connector.GetData().Close();
             } catch(System.Net.WebException ex) {
-                throw new ConnectionException("Application not found at the URL: " + connectionUrl, ex);
+                throw new ConnectionException("Application not found at the URL: " + _connectionUrl, ex);
             }
         }
 
@@ -74,11 +78,11 @@ namespace VersionOne.SDK.APIClient {
         }
 
         private MetaModel CreateMetaModel() {
-            return new MetaModel(PrepareConnector(connectionUrl + "meta.v1/"), false);
+            return new MetaModel(PrepareConnector(_connectionUrl + "meta.v1/"), false);
         }
 
         public void CheckAuthentication() {
-            IServices services = new Services(CreateMetaModel(), PrepareConnector(connectionUrl + "rest-1.v1/"));
+            IServices services = new Services(CreateMetaModel(), PrepareConnector(_connectionUrl + "rest-1.v1/"));
             Oid loggedin;
 
             try {
@@ -92,16 +96,24 @@ namespace VersionOne.SDK.APIClient {
             }
         }
 
-        private V1APIConnector PopulateHeaders(V1APIConnector connector) {
+		private VersionOneAPIConnector PopulateHeaders(VersionOneAPIConnector connector)
+		{
             IDictionary<string, string> dict = connector.CustomHttpHeaders;
-            foreach(KeyValuePair<string, string> pair in customHttpHeaders) {
+            foreach(KeyValuePair<string, string> pair in _customHttpHeaders) {
                 dict.Add(pair.Key, pair.Value);
             }
             return connector;
         }
 
-        private V1APIConnector PrepareConnector(string url) {
-            var connector = new V1APIConnector(url, username, password, integratedAuth, proxyProvider);
+		private VersionOneAPIConnector PrepareConnector(string url)
+		{
+			var connector = new VersionOneAPIConnector(url, proxyProvider: _proxyProvider);
+
+			if (_integratedAuth)
+				connector.WithWindowsIntegratedAuthentication();
+			else
+				connector.WithVersionOneUsernameAndPassword(_username, _password);
+
             return PopulateHeaders(connector);
         }
     }
